@@ -215,13 +215,14 @@
     <!-- VOTAR -->
     <section id="vV">
       <div class="card" id="voteCard">
-        <p class="s" style="margin-bottom:12px">Elige a tu cantante favorito (solo puedes votar una vez):</p>
+        <label for="nom">Nombre completo</label>
+        <input id="nom" autocomplete="name" placeholder="Ej. María López">
+        <label for="cod">Código de estudiante</label>
+        <input id="cod" autocomplete="off" placeholder="Ej. 20240123">
+        <p class="s" style="margin:14px 0 8px">Elige a tu cantante favorito (solo 1 voto por código):</p>
         <div class="opts" id="opts"></div>
         <div class="acts"><button class="btn pri" id="send" disabled>Enviar voto</button></div>
         <div id="m2"></div>
-      </div>
-      <div class="card hide" id="votedCard">
-        <div class="msg good" style="margin-top:0">✅ ¡Tu voto ya fue registrado! Gracias por participar.</div>
       </div>
     </section>
 
@@ -237,6 +238,10 @@
         <div class="card"><small>Total de votos</small>
           <div class="big" id="tot">0</div>
           <div id="res"></div>
+        </div>
+        <div class="card"><b>Estudiantes que ya votaron (<span id="np">0</span>)</b>
+          <p class="s"><small>Solo se guarda quién votó, nunca por quién.</small></p>
+          <ul id="lst"></ul>
         </div>
         <div class="card"><b>Herramientas</b>
           <p class="s"><small>Los votos se guardan en tiempo real en Google Sheets.</small></p>
@@ -258,53 +263,11 @@
 
     let OPT = ["Chechito", "Roy y los Gentiles", "Ocobamba", "Sonia Morales"];
     const $ = id => document.getElementById(id);
+    const norm = c => c.trim().toUpperCase().replace(/\s+/g, "");
     const say = (id, t, c) => { $(id).innerHTML = t ? `<div class="msg ${c}">${esc(t)}</div>` : ""; };
     const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-    const getCookie = name => {
-      const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
-      return m ? decodeURIComponent(m[1]) : "";
-    };
-    const setCookie = (name, val, days = 365) => {
-      document.cookie = `${name}=${encodeURIComponent(val)}; max-age=${days * 86400}; path=/; SameSite=Lax`;
-    };
-    function getDeviceId() {
-      let id = "";
-      try { id = localStorage.getItem("vt_dev_id") || ""; } catch (e) {}
-      if (!id) id = getCookie("vt_dev_id");
-      if (!id) {
-        id = "dev_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-      }
-      try { localStorage.setItem("vt_dev_id", id); } catch (e) {}
-      setCookie("vt_dev_id", id);
-      return id;
-    }
-    function hasVoted() {
-      try { if (localStorage.getItem("vt_voted") === "1") return true; } catch (e) {}
-      return getCookie("vt_voted") === "1";
-    }
-    function markVoted() {
-      try { localStorage.setItem("vt_voted", "1"); } catch (e) {}
-      setCookie("vt_voted", "1");
-    }
-    function clearLocalVote() {
-      try { localStorage.removeItem("vt_voted"); } catch (e) {}
-      setCookie("vt_voted", "", -1);
-      sel = null;
-      renderOpts();
-      $("send").disabled = true;
-      $("send").textContent = "Enviar voto";
-      say("m2", "");
-      syncVoteView();
-    }
-
-    let sel = null, adminPin = "", lastData = { counts: {} };
-
-    function syncVoteView() {
-      const voted = hasVoted();
-      $("voteCard").classList.toggle("hide", voted);
-      $("votedCard").classList.toggle("hide", !voted);
-    }
+    let sel = null, adminPin = "", lastData = { counts: {}, padron: [] };
 
     async function api(payload) {
       if (!SCRIPT_URL || SCRIPT_URL.includes("PEGA_AQUI")) {
@@ -331,7 +294,6 @@
       ).join("");
     }
     renderOpts();
-    syncVoteView();
 
     // Pestañas
     function tab(a) {
@@ -344,17 +306,34 @@
     $("tV").onclick = () => tab(false);
     $("tA").onclick = () => tab(true);
 
-    // Votar directo
+    // Votar en una sola pantalla
     $("opts").onclick = e => {
       const b = e.target.closest(".opt");
-      if (!b || hasVoted()) return;
+      if (!b) return;
       sel = +b.dataset.i;
       document.querySelectorAll(".opt").forEach(x => x.classList.toggle("sel", x === b));
       $("send").disabled = false;
     };
 
+    function resetVoteForm() {
+      sel = null;
+      $("nom").value = "";
+      $("cod").value = "";
+      renderOpts();
+      $("send").disabled = true;
+      $("send").textContent = "Enviar voto";
+      say("m2", "");
+    }
+
     $("send").onclick = async () => {
-      if (sel === null || hasVoted()) return;
+      const n = $("nom").value.trim();
+      const c = norm($("cod").value);
+      if (n.length < 3 || c.length < 3) {
+        return say("m2", "Escribe tu nombre completo y tu código de estudiante.", "err");
+      }
+      if (sel === null) {
+        return say("m2", "Elige a un cantante antes de enviar.", "err");
+      }
       const sendBtn = $("send");
       sendBtn.disabled = true;
       sendBtn.textContent = "Enviando voto...";
@@ -362,19 +341,14 @@
       try {
         await api({
           action: "vote",
-          nombre: "Votante",
-          hash: getDeviceId(),
+          nombre: n,
+          codigo: c,
+          hash: c,
           cantante: OPT[sel]
         });
-        markVoted();
         say("m2", "✅ ¡Voto registrado! Gracias por participar.", "good");
-        setTimeout(syncVoteView, 1500);
+        setTimeout(resetVoteForm, 2200);
       } catch (err) {
-        if (/ya registró su voto/i.test(err.message)) {
-          markVoted();
-          syncVoteView();
-          return;
-        }
         say("m2", err.message, "err");
         sendBtn.disabled = false;
         sendBtn.textContent = "Enviar voto";
@@ -448,6 +422,15 @@
         const pc = sum ? Math.round(v / sum * 100) : 0;
         return `<div class="row"><span>${esc(o)}${sum && v === max ? " 🏆" : ""}</span><span>${v} · ${pc}%</span></div><div class="bar"><i style="width:${pc}%"></i></div>`;
       }).join("");
+      const p = data.padron || [];
+      $("np").textContent = p.length;
+      $("lst").innerHTML = p.map(item => {
+        if (item && typeof item === "object") {
+          const cod = item.codigo ? ` <small>(${esc(item.codigo)})</small>` : "";
+          return `<li>${esc(item.nombre || "")}${cod}</li>`;
+        }
+        return `<li>${esc(item)}</li>`;
+      }).join("");
     }
 
     $("csv").onclick = () => {
@@ -466,7 +449,6 @@
       try {
         const data = await api({ action: "reset", pin: adminPin });
         lastData = data;
-        clearLocalVote();
         draw(data);
         say("m4", "Datos borrados en Google Sheets.", "good");
       } catch (err) {
