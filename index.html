@@ -261,7 +261,7 @@
     // PEGA AQUÍ LA URL DE TU APLICACIÓN WEB DE GOOGLE APPS SCRIPT (termina en /exec)
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqdvcY7sENaqQqaWfaMLilPF2RzOzwPQlbqqPYkFNWTefH3VVMvOxyhHumo-GbOrXH/exec";
 
-    let OPT = ["Chechito", "Roy y los Gentiles", "Ocobamba", "Sonia Morales"];
+    const OPT = ["Chechito", "Sonia Morales"];
     const $ = id => document.getElementById(id);
     const norm = c => c.trim().toUpperCase().replace(/\s+/g, "");
     const say = (id, t, c) => { $(id).innerHTML = t ? `<div class="msg ${c}">${esc(t)}</div>` : ""; };
@@ -281,10 +281,6 @@
       if (!res.ok) throw new Error("Error de conexión (" + res.status + ").");
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "No se pudo completar la operación.");
-      if (Array.isArray(data.cantantes) && data.cantantes.length) {
-        OPT = data.cantantes;
-        renderOpts();
-      }
       return data;
     }
 
