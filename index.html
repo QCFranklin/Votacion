@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Votación de cantantes</title>
+  <style>
+    :root {
+      --bg: #f6f4ef;
+      --card: #fff;
+      --tx: #1d1b18;
+      --mu: #6b665d;
+      --bd: #e2ddd2;
+      --ac: #c2410c;
+      --ok: #15803d
+    }
+
+    @media (prefers-color-scheme:dark) {
+      :root {
+        --bg: #161512;
+        --card: #211f1b;
+        --tx: #f1ede4;
+        --mu: #a39d90;
+        --bd: #38342d;
+        --ac: #fb923c;
+        --ok: #4ade80
+      }
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--tx)
+    }
+
+    .w {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 20px 16px 60px
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin: 8px 0 4px
+    }
+
+    p.s {
+      color: var(--mu);
+      margin: 0 0 16px
+    }
+
+    nav {
+      display: flex;
+      gap: 8px;
+      margin: 16px 0
+    }
+
+    nav button,
+    .btn {
+      border: 1px solid var(--bd);
+      background: var(--card);
+      color: var(--tx);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font: inherit;
+      cursor: pointer
+    }
+
+    nav button.on,
+    .btn.pri {
+      background: var(--ac);
+      color: #fff;
+      border-color: var(--ac)
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--bd);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px
+    }
+
+    label {
+      display: block;
+      font-size: .85rem;
+      color: var(--mu);
+      margin: 10px 0 4px
+    }
+
+    input {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid var(--bd);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--tx);
+      font: inherit
+    }
+
+    .opts {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px
+    }
+
+    .opt {
+      text-align: left;
+      padding: 16px;
+      border: 2px solid var(--bd);
+      border-radius: 12px;
+      background: var(--card);
+      color: var(--tx);
+      font: inherit;
+      font-size: 1.1rem;
+      cursor: pointer
+    }
+
+    .opt.sel {
+      border-color: var(--ac);
+      background: color-mix(in srgb, var(--ac) 12%, var(--card))
+    }
+
+    .msg {
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-top: 12px;
+      font-size: .92rem
+    }
+
+    .err {
+      background: #fee2e2;
+      color: #991b1b
+    }
+
+    .good {
+      background: #dcfce7;
+      color: #166534
+    }
+
+    .bar {
+      height: 26px;
+      background: var(--bg);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 4px 0 14px
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      background: var(--ac);
+      transition: width .5s
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600
+    }
+
+    .big {
+      font-size: 2rem;
+      font-weight: 700
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      columns: 2;
+      color: var(--mu);
+      font-size: .9rem
+    }
+
+    .acts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px
+    }
+
+    .hide {
+      display: none
+    }
+
+    small {
+      color: var(--mu)
+    }
+
+    @media (max-width:520px) {
+      ul {
+        columns: 1
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="w">
+    <h1>🎤 Votación de cantantes</h1>
+    <p class="s">Tu voto es secreto: solo el administrador ve los resultados totales.</p>
+    <nav><button id="tV" class="on">Votar</button><button id="tA">Administrador</button></nav>
+
+    <!-- VOTAR -->
+    <section id="vV">
+      <div class="card" id="voteCard">
+        <p class="s" style="margin-bottom:12px">Elige a tu cantante favorito (solo puedes votar una vez):</p>
+        <div class="opts" id="opts"></div>
+        <div class="acts"><button class="btn pri" id="send" disabled>Enviar voto</button></div>
+        <div id="m2"></div>
+      </div>
+      <div class="card hide" id="votedCard">
+        <div class="msg good" style="margin-top:0">✅ ¡Tu voto ya fue registrado! Gracias por participar.</div>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="vA" class="hide">
+      <div class="card" id="login">
+        <b>Acceso de administrador</b>
+        <label for="pin">PIN de administrador</label><input id="pin" type="password" autocomplete="off">
+        <div class="acts"><button class="btn pri" id="ent">Entrar</button></div>
+        <div id="m3"></div>
+      </div>
+      <div id="panel" class="hide">
+        <div class="card"><small>Total de votos</small>
+          <div class="big" id="tot">0</div>
+          <div id="res"></div>
+        </div>
+        <div class="card"><b>Herramientas</b>
+          <p class="s"><small>Los votos se guardan en tiempo real en Google Sheets.</small></p>
+          <div class="acts">
+            <button class="btn pri" id="ref">🔄 Actualizar</button>
+            <button class="btn" id="csv">⬇ Resultados CSV</button>
+            <button class="btn" id="rst">🗑 Reiniciar todo</button>
+            <button class="btn" id="out">Cerrar sesión</button>
+          </div>
+          <div id="m4"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // PEGA AQUÍ LA URL DE TU APLICACIÓN WEB DE GOOGLE APPS SCRIPT (termina en /exec)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqdvcY7sENaqQqaWfaMLilPF2RzOzwPQlbqqPYkFNWTefH3VVMvOxyhHumo-GbOrXH/exec";
+
+    let OPT = ["Chechito", "Roy y los Gentiles", "Ocobamba", "Sonia Morales"];
+    const $ = id => document.getElementById(id);
+    const say = (id, t, c) => { $(id).innerHTML = t ? `<div class="msg ${c}">${esc(t)}</div>` : ""; };
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    const getCookie = name => {
+      const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+      return m ? decodeURIComponent(m[1]) : "";
+    };
+    const setCookie = (name, val, days = 365) => {
+      document.cookie = `${name}=${encodeURIComponent(val)}; max-age=${days * 86400}; path=/; SameSite=Lax`;
+    };
+    function getDeviceId() {
+      let id = "";
+      try { id = localStorage.getItem("vt_dev_id") || ""; } catch (e) {}
+      if (!id) id = getCookie("vt_dev_id");
+      if (!id) {
+        id = "dev_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      }
+      try { localStorage.setItem("vt_dev_id", id); } catch (e) {}
+      setCookie("vt_dev_id", id);
+      return id;
+    }
+    function hasVoted() {
+      try { if (localStorage.getItem("vt_voted") === "1") return true; } catch (e) {}
+      return getCookie("vt_voted") === "1";
+    }
+    function markVoted() {
+      try { localStorage.setItem("vt_voted", "1"); } catch (e) {}
+      setCookie("vt_voted", "1");
+    }
+    function clearLocalVote() {
+      try { localStorage.removeItem("vt_voted"); } catch (e) {}
+      setCookie("vt_voted", "", -1);
+      sel = null;
+      renderOpts();
+      $("send").disabled = true;
+      $("send").textContent = "Enviar voto";
+      say("m2", "");
+      syncVoteView();
+    }
+
+    let sel = null, adminPin = "", lastData = { counts: {} };
+
+    function syncVoteView() {
+      const voted = hasVoted();
+      $("voteCard").classList.toggle("hide", voted);
+      $("votedCard").classList.toggle("hide", !voted);
+    }
+
+    async function api(payload) {
+      if (!SCRIPT_URL || SCRIPT_URL.includes("PEGA_AQUI")) {
+        throw new Error("Falta configurar SCRIPT_URL en index.html con la URL de Google Apps Script.");
+      }
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("Error de conexión (" + res.status + ").");
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "No se pudo completar la operación.");
+      if (Array.isArray(data.cantantes) && data.cantantes.length) {
+        OPT = data.cantantes;
+        renderOpts();
+      }
+      return data;
+    }
+
+    function renderOpts() {
+      $("opts").innerHTML = OPT.map((o, i) =>
+        `<button class="opt${sel === i ? " sel" : ""}" data-i="${i}">${esc(o)}</button>`
+      ).join("");
+    }
+    renderOpts();
+    syncVoteView();
+
+    // Pestañas
+    function tab(a) {
+      $("vV").classList.toggle("hide", a);
+      $("vA").classList.toggle("hide", !a);
+      $("tV").classList.toggle("on", !a);
+      $("tA").classList.toggle("on", a);
+      if (a) showAdmin();
+    }
+    $("tV").onclick = () => tab(false);
+    $("tA").onclick = () => tab(true);
+
+    // Votar directo
+    $("opts").onclick = e => {
+      const b = e.target.closest(".opt");
+      if (!b || hasVoted()) return;
+      sel = +b.dataset.i;
+      document.querySelectorAll(".opt").forEach(x => x.classList.toggle("sel", x === b));
+      $("send").disabled = false;
+    };
+
+    $("send").onclick = async () => {
+      if (sel === null || hasVoted()) return;
+      const sendBtn = $("send");
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Enviando voto...";
+      say("m2", "");
+      try {
+        await api({
+          action: "vote",
+          nombre: "Votante",
+          hash: getDeviceId(),
+          cantante: OPT[sel]
+        });
+        markVoted();
+        say("m2", "✅ ¡Voto registrado! Gracias por participar.", "good");
+        setTimeout(syncVoteView, 1500);
+      } catch (err) {
+        if (/ya registró su voto/i.test(err.message)) {
+          markVoted();
+          syncVoteView();
+          return;
+        }
+        say("m2", err.message, "err");
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Enviar voto";
+      }
+    };
+
+    // Admin
+    function showAdmin(skipFetch = false) {
+      const logged = Boolean(adminPin);
+      $("login").classList.toggle("hide", logged);
+      $("panel").classList.toggle("hide", !logged);
+      if (logged && !skipFetch) loadAdmin(false);
+    }
+
+    async function loginAdmin() {
+      const p = $("pin").value;
+      if (!p) return say("m3", "Ingresa el PIN de administrador.", "err");
+      const btn = $("ent");
+      btn.disabled = true;
+      btn.textContent = "Verificando...";
+      say("m3", "");
+      try {
+        const data = await api({ action: "admin", pin: p });
+        adminPin = p;
+        $("pin").value = "";
+        lastData = data;
+        showAdmin(true);
+        draw(data);
+      } catch (err) {
+        say("m3", err.message, "err");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Entrar";
+      }
+    }
+    $("ent").onclick = loginAdmin;
+    $("pin").addEventListener("keydown", e => { if (e.key === "Enter") loginAdmin(); });
+
+    $("out").onclick = () => {
+      adminPin = "";
+      say("m4", "");
+      showAdmin();
+    };
+
+    async function loadAdmin(showMsg = true) {
+      if (!adminPin) return;
+      const btn = $("ref");
+      btn.disabled = true;
+      btn.textContent = "Actualizando...";
+      try {
+        const data = await api({ action: "admin", pin: adminPin });
+        lastData = data;
+        draw(data);
+        if (showMsg) say("m4", "Resultados actualizados.", "good");
+      } catch (err) {
+        say("m4", err.message, "err");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🔄 Actualizar";
+      }
+    }
+    $("ref").onclick = () => loadAdmin(true);
+
+    function draw(data) {
+      const t = data.counts || {};
+      const sum = OPT.reduce((s, o) => s + (t[o] || 0), 0);
+      const max = Math.max(0, ...OPT.map(o => t[o] || 0));
+      $("tot").textContent = sum;
+      $("res").innerHTML = OPT.map(o => {
+        const v = t[o] || 0;
+        const pc = sum ? Math.round(v / sum * 100) : 0;
+        return `<div class="row"><span>${esc(o)}${sum && v === max ? " 🏆" : ""}</span><span>${v} · ${pc}%</span></div><div class="bar"><i style="width:${pc}%"></i></div>`;
+      }).join("");
+    }
+
+    $("csv").onclick = () => {
+      const t = lastData.counts || {};
+      const csv = "Cantante,Votos\n" + OPT.map(o => `"${o.replace(/"/g, '""')}",${t[o] || 0}`).join("\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      a.download = "resultados.csv";
+      a.click();
+    };
+
+    $("rst").onclick = async () => {
+      if (!confirm("¿Borrar TODOS los votos y registros en Google Sheets? No se puede deshacer.")) return;
+      const btn = $("rst");
+      btn.disabled = true;
+      try {
+        const data = await api({ action: "reset", pin: adminPin });
+        lastData = data;
+        clearLocalVote();
+        draw(data);
+        say("m4", "Datos borrados en Google Sheets.", "good");
+      } catch (err) {
+        say("m4", err.message, "err");
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  </script>
+</body>
+
+</html>
